@@ -1,0 +1,78 @@
+language: c
+sudo: true
+dist: xenial
+
+env:
+  global:
+    - NAME: tesseract
+    - ASDF_SYSTEM: bodge-tesseract
+    - PATH: ~/bin/:$PATH
+    - secure: "C3D82K2M9XrRRGZONR71iInhBr1yjZyTrhhEZfbOckGjOHaP0aTH/cRTjM6K7ssfRDG2tE5KXV9MVWPp0KAmIRTvzuN5LINCfw/QLs+sMr+2hLANhuCa17UnaUTZ2+x8hxMJBaC4b8W69ZccUjOQrRwS22V9iRYdaLmULhu/umlnojWAfSk8MLJIWSSgPcq8MQo3hzFEcBmHUqQ4PBePQSNt7ik2U14n4KOPNHo+0Um7/E8QsBV0oDXmFvjcYjDmnv/BRWGSp6T0eeInvHT/AatqDxJpUtHAwIeTvp4EH57ZBap5mqWruBrSIbuX0M5OvkfWK01stoAcRBmQFOGES17GRQdibBK/q+xtZSMCOiRt16HUks3nR5+cXNWq9O6Xu5cxLBMCAmLQQrfNHDGyi8hY9qjtByDM4D24RpAmggkiSzZQUPR6bI2DhYbKNh4KzTYbgPPgvtfZ/Ii2arKAWsiGKcXJdcF++FcO1XZzaxfLvD0p1mhCY4P5Eoq1g2yjc9a3E9ksEhun2GoMZp9ZN0Nuy8XeVvhIB0sjN82dB60NKh+X0h3UOy/6wE4MbpXsFT2fXkI5X5kzKPkPoVBMkazEGVkUBMQwJML7yWxYHUO33Gs4C2i8hMmr38uUBj/pZfqgbzfT/1tmpuZ8RwUNwBAHfLKtWe78I8eK9LjStAE="
+
+matrix:
+  include:
+  - os: linux
+    env:
+      - TARGET_ARCH=i686
+      - CFLAGS=-m32
+      - EXTENSION=so
+  - os: linux
+    env:
+      - TARGET_ARCH=x86_64
+      - CFLAGS=-m64
+      - EXTENSION=so
+  - os: osx
+    env:
+      - TARGET_ARCH=i686
+      - CFLAGS=-m32
+      - EXTENSION=dylib
+  - os: osx
+    env:
+      - TARGET_ARCH=x86_64
+      - CFLAGS=-m64
+      - EXTENSION=dylib
+
+branches:
+  only:
+  - "/^v\\d+(\\.\\d+)+$/"
+
+cache:
+  directories:
+    - $HOME/Library/Caches/Homebrew
+
+before_install:
+  - >
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      sudo add-apt-repository ppa:alex-p/tesseract-ocr -y
+      sudo apt-get update -q
+      sudo -E apt-get -yq --no-install-suggests --no-install-recommends install patchelf g++ g++-multilib libc6-dev-i386 libtool-bin autoconf automake libleptonica-dev
+    elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+       brew update && brew install libtool leptonica;
+    fi
+
+install:
+  - curl -L http://bodge.borodust.org/files/install.sh | sh
+  - curl -L http://bodge.borodust.org/files/c2ffi-$TRAVIS_OS_NAME-$TARGET_ARCH.zip -o /tmp/c2ffi.zip
+  - cd ~/bin/ && unzip /tmp/c2ffi.zip
+  - ln -s $TRAVIS_BUILD_DIR/ ~/quicklisp/local-projects/$ASDF_SYSTEM
+
+script:
+  - cd $TRAVIS_BUILD_DIR/lib/ && make clean build
+  - rm -rf $TRAVIS_BUILD_DIR/spec/*
+  - lisp "$TRAVIS_BUILD_DIR/regen-spec.lisp" $TARGET_ARCH "$ASDF_SYSTEM"
+  - cd $TRAVIS_BUILD_DIR/ && zip -r spec.zip spec/
+
+before_deploy:
+  - export TARGET_FILE=$TRAVIS_BUILD_DIR/lib$NAME.$EXTENSION.bodged-$TARGET_ARCH-$TRAVIS_OS_NAME-$TRAVIS_BRANCH
+  - export SPEC_ARCHIVE=$TARGET_FILE-spec.zip
+  - mv $TRAVIS_BUILD_DIR/lib/lib$NAME.$EXTENSION.bodged $TARGET_FILE
+  - mv $TRAVIS_BUILD_DIR/spec.zip $SPEC_ARCHIVE
+
+deploy:
+  provider: releases
+  api_key: $GITHUB_TOKEN
+  file: [$TARGET_FILE, $SPEC_ARCHIVE]
+  skip_cleanup: true
+  overwrite: true
+  on:
+    tags: true
