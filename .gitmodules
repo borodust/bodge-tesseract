@@ -1,0 +1,3 @@
+[submodule "lib/tesseract"]
+	path = lib/tesseract
+	url = https://github.com/borodust/tesseract.git
