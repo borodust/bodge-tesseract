@@ -43,23 +43,21 @@ cache:
 before_install:
   - >
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      sudo add-apt-repository ppa:alex-p/tesseract-ocr -y
-      sudo apt-get update -q
-      sudo -E apt-get -yq --no-install-suggests --no-install-recommends install patchelf g++ g++-multilib libc6-dev-i386 libtool-bin autoconf automake libleptonica-dev
+      sudo add-apt-repository ppa:alex-p/tesseract-ocr -y;
+      sudo apt-get update -q;
+      sudo -E apt-get -yq --no-install-suggests --no-install-recommends install patchelf g++ g++-multilib libc6-dev-i386 libtool-bin autoconf automake libleptonica-dev;
     elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
        brew update && brew install libtool leptonica;
     fi
 
 install:
   - curl -L http://bodge.borodust.org/files/install.sh | sh
-  - curl -L http://bodge.borodust.org/files/c2ffi-$TRAVIS_OS_NAME-$TARGET_ARCH.zip -o /tmp/c2ffi.zip
-  - cd ~/bin/ && unzip /tmp/c2ffi.zip
   - ln -s $TRAVIS_BUILD_DIR/ ~/quicklisp/local-projects/$ASDF_SYSTEM
 
 script:
   - cd $TRAVIS_BUILD_DIR/lib/ && make clean build
   - rm -rf $TRAVIS_BUILD_DIR/spec/*
-  - lisp "$TRAVIS_BUILD_DIR/regen-spec.lisp" $TARGET_ARCH "$ASDF_SYSTEM"
+  - lisp "$TRAVIS_BUILD_DIR/util/regen-spec.lisp" "$ASDF_SYSTEM" t $TARGET_ARCH
   - cd $TRAVIS_BUILD_DIR/ && zip -r spec.zip spec/
 
 before_deploy:
