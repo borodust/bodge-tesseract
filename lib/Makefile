@@ -37,7 +37,7 @@ build:
 	cp -L $(LIBRARY_FILE) $(TARGET_FILE)
 	strip -S $(TARGET_FILE)
 	if [ "$(EXTENSION)" = "so" ]; then							\
-	  patchelf --set-rpath '@ORIGIN/' "$(TARGET_FILE)";					\
+	  patchelf --set-rpath '$$ORIGIN/' "$(TARGET_FILE)";					\
 	  patchelf --set-soname '$(BIN)' "$(TARGET_FILE)";					\
 	fi
 
